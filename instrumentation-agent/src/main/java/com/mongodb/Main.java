@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
@@ -81,51 +79,70 @@ public class Main {
 
     public static class GetCommandListenersAdvice {
 
-        public static final Map<Object, CommandListener> COMMAND_LISTENER_CACHE = new ConcurrentHashMap<>();
+        //public static final Map<Object, CommandListener> COMMAND_LISTENER_CACHE = new ConcurrentHashMap<>();
 
         @Advice.OnMethodExit
         public static void onExit(@Advice.This Object settings,
                                   @Advice.Return(readOnly = false, typing = Assigner.Typing.DYNAMIC) List<CommandListener> listeners) {
             LOGGER.info("Agent intercepted com.mongodb.MongoClientSettings.getCommandListeners(). Injecting command listener.");
-            List<CommandListener> newListeners = new ArrayList<>(listeners);
 
             MongoClientSettings mongoClientSettings = (MongoClientSettings) settings;
-            if (!COMMAND_LISTENER_CACHE.containsKey(settings)) {
-                CommandListener loggingListener = new CommandListener() {
-                    @Override
-                    public void commandStarted(final CommandStartedEvent event) {
-                        LOGGER.info("Client id: {}\nCommand Started:\n  Command Name: {}\n  Command Body: {}\n  Connection Description: {}",
-                                mongoClientSettings.getApplicationName(),
-                                event.getCommandName(),
-                                event.getCommand(),
-                                event.getConnectionDescription());
-                    }
-
-                    @Override
-                    public void commandSucceeded(final CommandSucceededEvent event) {
-                        LOGGER.info(
-                                "Client id:{}\nCommand Succeeded:\n  Command Name: {}\n  Response Body: {}\n  Connection Description: {}\n  Connection elapsed ms: {}",
-                                mongoClientSettings.getApplicationName(),
-                                event.getCommandName(),
-                                event.getResponse(),
-                                event.getConnectionDescription(),
-                                event.getElapsedTime(TimeUnit.MILLISECONDS));
-                    }
-
-                    @Override
-                    public void commandFailed(final CommandFailedEvent event) {
-                        LOGGER.info("Client id:{}\nCommand Failed:\n  Command Name: {}\n  Exception: {}\n  Connection Description: {}\n  Connection elapsed ms: {}",
-                                mongoClientSettings.getApplicationName(),
-                                event.getCommandName(),
-                                event.getThrowable().getMessage(),
-                                event.getConnectionDescription(),
-                                event.getElapsedTime(TimeUnit.MILLISECONDS));
-                    }
-                };
-                COMMAND_LISTENER_CACHE.put(settings, loggingListener);
+            boolean containsAdvice = hasLoggingListener(listeners);
+            if (containsAdvice) {
+                return;
             }
-            newListeners.add(COMMAND_LISTENER_CACHE.get(settings));
-            listeners = newListeners;
+
+            //TODO when two MongoClients are merged, only one listener should be at listeners collection to avoid logs duplications. (which is done)
+            // However, applicationName might be different....
+            // so we have to log correct app names for those merged settings.
+            List<CommandListener> newListeners = new ArrayList<>(listeners);
+            CommandListener loggingListener = new LoggingCommandListener(mongoClientSettings);
+            newListeners.add(loggingListener);
+            listeners = newListeners; //that is how return value is reassigned in bytebuddy.
+        }
+
+        public static boolean hasLoggingListener(final List<CommandListener> listeners) {
+            return listeners.stream()
+                    .anyMatch(LoggingCommandListener.class::isInstance);
+        }
+
+        public static class LoggingCommandListener implements CommandListener {
+            private final MongoClientSettings mongoClientSettings;
+
+            public LoggingCommandListener(final MongoClientSettings mongoClientSettings) {
+                this.mongoClientSettings = mongoClientSettings;
+            }
+
+            @Override
+            public void commandStarted(final CommandStartedEvent event) {
+                LOGGER.info("Client id: {}\nCommand Started:\n  Command Name: {}\n  Command Body: {}\n  Connection Description: {}",
+                        mongoClientSettings.getApplicationName(),
+                        event.getCommandName(),
+                        event.getCommand(),
+                        event.getConnectionDescription());
+            }
+
+            @Override
+            public void commandSucceeded(final CommandSucceededEvent event) {
+                LOGGER.info(
+                        "Client id: {}\nCommand Succeeded:\n  Command Name: {}\n  Response Body: {}\n  Connection Description: {}\n  Connection elapsed ms: {}",
+                        mongoClientSettings.getApplicationName(),
+                        event.getCommandName(),
+                        event.getResponse(),
+                        event.getConnectionDescription(),
+                        event.getElapsedTime(TimeUnit.MILLISECONDS));
+            }
+
+            @Override
+            public void commandFailed(final CommandFailedEvent event) {
+                LOGGER.info(
+                        "Client id: {}\nCommand Failed:\n  Command Name: {}\n  Exception: {}\n  Connection Description: {}\n  Connection elapsed ms: {}",
+                        mongoClientSettings.getApplicationName(),
+                        event.getCommandName(),
+                        event.getThrowable().getMessage(),
+                        event.getConnectionDescription(),
+                        event.getElapsedTime(TimeUnit.MILLISECONDS));
+            }
         }
     }
 
