@@ -11,17 +11,17 @@ import java.util.List;
 public class SelectTestFilePopupStep extends BaseListPopupStep<PsiJavaFile> {
 
     private final Project project;
-    private final String testDescription;
+    private final TestContext testContext;
 
-    public SelectTestFilePopupStep(List<PsiJavaFile> psiJavaFiles, Project project, String testDescription) {
+    public SelectTestFilePopupStep(List<PsiJavaFile> psiJavaFiles, Project project, TestContext testContext) {
         super("Select File to Run a Test With", psiJavaFiles);
         this.project = project;
-        this.testDescription = testDescription;
+        this.testContext = testContext;
     }
 
     @Override
     public PopupStep onChosen(PsiJavaFile selectedFile, boolean finalChoice) {
-        runTestClass(project, selectedFile, testDescription);
+        runTestClass(project, selectedFile, testContext);
         return FINAL_CHOICE;
     }
 
@@ -31,7 +31,7 @@ public class SelectTestFilePopupStep extends BaseListPopupStep<PsiJavaFile> {
         return javaFile.getClasses()[0].getQualifiedName();
     }
 
-    public static void runTestClass(Project project, PsiJavaFile psiJavaTestFile, String testDescription) {
-        JunitModuleTestRunner.runViaJunit(project, psiJavaTestFile, testDescription);
+    public static void runTestClass(Project project, PsiJavaFile psiJavaTestFile, TestContext testContext) {
+        JunitModuleTestRunner.runViaJunit(project, psiJavaTestFile, testContext);
     }
 }

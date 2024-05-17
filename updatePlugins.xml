@@ -19,9 +19,14 @@
 
         <!-- the <description> element should match the same element in plugin.xml. -->
         <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-  ]]></description>
+    This unified plugin helps to recognize unified JSON tests and provides capabilities to run and debug them.<br>
+    <em>Most HTML tags may be used.</em><br>
+    <br>
+    Features:<br>
+    - Enhanced logging with the ability to intercept command started, succeeded, and failed messages for better troubleshooting.<br>
+    - Ability to run a set of tests in a unified JSON file.<br>
+    - Ability to run specific tests with a specific async/sync runner from a unified JSON file.
+]]></description>
         <!--
           The <idea-version> element must match the same element in build.gradle.kts. Required.
         -->

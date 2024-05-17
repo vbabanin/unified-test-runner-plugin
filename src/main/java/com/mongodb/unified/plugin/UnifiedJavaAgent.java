@@ -6,10 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 
 public class UnifiedJavaAgent {
 
     private static volatile File unpackedAgentJar;
+    private static volatile File configJsonFile;
 
     public UnifiedJavaAgent() {
         //NOOP
@@ -43,5 +45,22 @@ public class UnifiedJavaAgent {
 
     private boolean isAgentUnpacked() {
         return unpackedAgentJar != null && unpackedAgentJar.exists();
+    }
+
+    private boolean configExists() {
+        return configJsonFile != null && configJsonFile.exists();
+    }
+
+    public File createConfigFile(final String json) {
+        try {
+            if (!configExists()) {
+                configJsonFile = Files.createTempFile("unified-agent-config", ".json").toFile();
+                configJsonFile.deleteOnExit();
+            }
+            Files.write(configJsonFile.toPath(), json.getBytes(), StandardOpenOption.WRITE);
+            return configJsonFile;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

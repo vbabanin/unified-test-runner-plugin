@@ -1,9 +1,12 @@
 package com.mongodb;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
+import com.mongodb.lang.Nullable;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
@@ -17,24 +20,49 @@ import org.apache.logging.log4j.Logger;
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
+//NOTE All fields and methods are public static because the agent is loaded by a different class loader than the application.
 public class Main {
     public static final Logger LOGGER = LogManager.getLogger(Main.class);
     /**
      * Used for debugging purposes or development.
      */
     public static final Logger FILE_LOGGER = LogManager.getLogger("file");
-    public static String expectedTestDescription;
+    public static final ObjectMapper MAPPER = new ObjectMapper();
+    /**
+     * Used for faster test filtering when running tests.
+     */
+    public static final Map<String, Set<String>> TEST_INDEX = new HashMap<>();
+    public static TestContext testContext;
 
-    public static void premain(String arguments, Instrumentation instrumentation) {
-        expectedTestDescription = arguments;
+    public static void premain(@Nullable String arguments, Instrumentation instrumentation) throws JsonProcessingException {
+        LOGGER.info("Test arguments: {}", arguments);
+        if (arguments == null) {
+            testContext = TestContext.emptyContext();
+        } else {
+            testContext = MAPPER.readValue(arguments, TestContext.class);
+            indexTests();
+        }
         LOGGER.info("Unified test runner agent started");
         setupTransformer(instrumentation);
+    }
+
+    private static void indexTests() {
+        testContext.getTestDescriptions().stream().forEach(testDescription -> {
+            LOGGER.info("Test description: {}", testDescription.getDescription());
+            LOGGER.info("Test file: {}", testDescription.getTestFile());
+            TEST_INDEX.computeIfAbsent(testDescription.getTestFile(), k -> new HashSet<>())
+                    .add(testDescription.getDescription());
+        });
     }
 
     private static void setupTransformer(final Instrumentation instrumentation) {
@@ -66,20 +94,27 @@ public class Main {
         @Advice.OnMethodExit
         public static void onExit(@Advice.Return(readOnly = false) Collection<Object[]> returned) {
             LOGGER.info("Agent intercepted com.mongodb.client.unified.UnifiedTest.getTestData()");
+            if (testContext.getTestDescriptions().isEmpty()) {
+                return;
+            }
             Iterator<Object[]> iterator = returned.iterator();
             while (iterator.hasNext()) {
                 Object[] objects = iterator.next();
+                String fileDescription = (String) objects[0];
                 String testDescription = (String) objects[1];
-                if (!testDescription.equals(expectedTestDescription)) {
+                Set<String> expectedTestDescriptions = TEST_INDEX.get(fileDescription);
+                if (containsRequestedTestDescription(expectedTestDescriptions, testDescription)) {
                     iterator.remove();
                 }
             }
         }
+
+        public static boolean containsRequestedTestDescription(final Set<String> testDescriptionsPerFile, final String testDescription) {
+            return testDescriptionsPerFile == null || !testDescriptionsPerFile.contains(testDescription);
+        }
     }
 
     public static class GetCommandListenersAdvice {
-
-        //public static final Map<Object, CommandListener> COMMAND_LISTENER_CACHE = new ConcurrentHashMap<>();
 
         @Advice.OnMethodExit
         public static void onExit(@Advice.This Object settings,

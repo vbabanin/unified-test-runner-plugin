@@ -31,7 +31,7 @@ public class TestFileLocator {
 //        Module syncModule = ModuleManager.getInstance(project).findModuleByName("driver-sync");
 //        Module reactiveModule = ModuleManager.getInstance(project).findModuleByName("driver-reactive-streams");
 
-        //TODO this code block takes significant amount of time to execute.
+        //FIXME this code block takes significant amount of time to execute.
         // Need to optimize it with narrowing down search scope to withing a module or folder.
         Collection<VirtualFile> javaFiles = FilenameIndex.getAllFilesByExt(project, "java", GlobalSearchScope.projectScope(project));
 
@@ -42,7 +42,7 @@ public class TestFileLocator {
 
     @NotNull
     private static List<PsiJavaFile> findAssociatedTestExecutors(final Project project, final Collection<VirtualFile> javaFiles,
-                                                     final String directoryName) {
+                                                                 final String directoryName) {
         List<PsiJavaFile> psiJavaFiles = new ArrayList<>();
         for (VirtualFile file : javaFiles) {
             PsiJavaFile psiJavaFile = (PsiJavaFile) PsiManager.getInstance(project).findFile(file);

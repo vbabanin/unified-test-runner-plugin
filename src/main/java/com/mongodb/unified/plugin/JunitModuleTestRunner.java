@@ -1,5 +1,7 @@
 package com.mongodb.unified.plugin;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.execution.ProgramRunnerUtil;
 import com.intellij.execution.RunManager;
 import com.intellij.execution.RunnerAndConfigurationSettings;
@@ -15,8 +17,9 @@ import java.io.File;
 
 public class JunitModuleTestRunner {
     private static final UnifiedJavaAgent unifiedJavaAgent = new UnifiedJavaAgent();
+    public static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public static void runViaJunit(Project project, PsiJavaFile psiJavaTestFile, String testDescription) {
+    public static void runViaJunit(Project project, PsiJavaFile psiJavaTestFile, TestContext testContext) {
         PsiClass psiTestClass = psiJavaTestFile.getClasses()[0];
         RunManager runManager = RunManager.getInstance(project);
 
@@ -25,12 +28,22 @@ public class JunitModuleTestRunner {
                 runManager.createConfiguration("Run " + psiTestClass.getName(), junitConfigurationType.getConfigurationFactories()[0]);
 
         File tempAgentJar = unifiedJavaAgent.createTempAgentJar();
-        String agentArgs = "-javaagent:" + tempAgentJar.getPath() + "=\"" + testDescription + "\"";
+        String jsonConfig = toJson(testContext).replace("\"", "\\\"");
+
+        String agentArgs = "-javaagent:" + tempAgentJar.getPath() + "=\"" + jsonConfig + "\"";
         JUnitConfiguration configuration = (JUnitConfiguration) settings.getConfiguration();
         configuration.setMainClass(psiTestClass);
         configuration.setVMParameters(agentArgs);
 
         runManager.setTemporaryConfiguration(settings);
         ProgramRunnerUtil.executeConfiguration(settings, DefaultRunExecutor.getRunExecutorInstance());
+    }
+
+    private static String toJson(final TestContext testContext) {
+        try {
+            return MAPPER.writeValueAsString(testContext);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Unable to parse timeout context", e);
+        }
     }
 }
