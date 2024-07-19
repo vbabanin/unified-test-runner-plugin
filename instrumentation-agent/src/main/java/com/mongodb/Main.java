@@ -16,6 +16,7 @@ import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
@@ -92,14 +93,15 @@ public class Main {
 
     public static class GetTestDataAdvice {
         @Advice.OnMethodExit
-        public static void onExit(@Advice.Return(readOnly = false) Collection<Object[]> returned) {
+        public static void onExit(@Advice.Return(readOnly = false) Collection<Arguments> returned) {
             LOGGER.info("Agent intercepted com.mongodb.client.unified.UnifiedTest.getTestData()");
             if (testContext.getTestDescriptions().isEmpty()) {
                 return;
             }
-            Iterator<Object[]> iterator = returned.iterator();
+            Iterator<Arguments> iterator = returned.iterator();
             while (iterator.hasNext()) {
-                Object[] objects = iterator.next();
+                Arguments arguments = iterator.next();
+                Object[] objects = arguments.get();
                 String fileDescription = (String) objects[0];
                 String testDescription = (String) objects[1];
                 Set<String> expectedTestDescriptions = TEST_INDEX.get(fileDescription);

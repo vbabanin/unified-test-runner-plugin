@@ -52,8 +52,8 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-sync:4.11.0")
     implementation("net.bytebuddy:byte-buddy-agent:1.14.11")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.12.3")
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    implementation(platform("org.junit:junit-bom:5.9.1"))
+    implementation("org.junit.jupiter:junit-jupiter")
 }
 
 tasks.test {
