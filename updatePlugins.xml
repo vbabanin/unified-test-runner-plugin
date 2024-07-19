@@ -12,8 +12,7 @@
     <plugin
             id="com.mongodb.unified.plugin"
             version="0.1.0"
-            url="https://github.com/vbabanin/unified-test-runner-plugin/releases/download/v0.1.0/unified-test-runner-plugin-1.0-SNAPSHOT.jar"
-    >
+            url="https://github.com/vbabanin/unified-test-runner-plugin/releases/download/v0.1.0/unified-test-runner-plugin-1.0-SNAPSHOT.jar">
         <!-- the <name> element should match the same element in plugin.xml. -->
         <name>Unified test runner</name>
 
@@ -30,6 +29,6 @@
         <!--
           The <idea-version> element must match the same element in build.gradle.kts. Required.
         -->
-        <idea-version since-build="222" until-build="233.*" />
+        <idea-version since-build="222" until-build="241.*" />
     </plugin>
 </plugins>
