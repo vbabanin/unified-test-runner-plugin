@@ -29,6 +29,6 @@
         <!--
           The <idea-version> element must match the same element in build.gradle.kts. Required.
         -->
-        <idea-version since-build="222" until-build="241.*" />
+        <idea-version since-build="222" until-build="242.*" />
     </plugin>
 </plugins>
